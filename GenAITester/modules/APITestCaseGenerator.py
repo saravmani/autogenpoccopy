@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 from autogen import AssistantAgent
 from autogen.agentchat.contrib.retrieve_user_proxy_agent import RetrieveUserProxyAgent
 from chromadb.utils import embedding_functions
+import json
+
+from utils.fileutils import save_text_to_file
 
 load_dotenv()
 
@@ -24,15 +27,15 @@ openai_ef = embedding_functions.OpenAIEmbeddingFunction(
 
 
 class APITestCaseGenerator:
-    def __init__(self,baseApiUrl,componentName):
+    def __init__(self,baseApiUrl):
         self.assistant = AssistantAgent(
             name="assistant",
             system_message="You are expert in writting API test cases in pytest using python with request package,  based on the scenarios and context." 
             "Also you follow the proper python syntext and return the exact python code. "
             "The test cases should be Autonomous and independent. "
-            "If required have presetup Ex: For duplicate/existing check condition as part of setup create first then create second time"
+            "If required have pre-setup Ex: For duplicate/existing check condition as part of setup create first then create second time"
             
-            "BASE_URL = "+ baseApiUrl + 
+            "Exact BASE_URL = "+ baseApiUrl + 
             "Sample code in pytest: "
             """
                 import pytest
@@ -80,6 +83,11 @@ class APITestCaseGenerator:
                 }
         )
 
+    def remove_code_blocks(self,text, lang): 
+        text = text.replace("```"+lang, "")
+        text = text.replace("```", "") 
+        return text.strip() 
+    
     def read_file_content(self, file_name):
         file_path = os.path.join(os.getenv('BDDFILESPATH'), file_name)
         with open(file_path, 'r',encoding='utf-8') as file:
@@ -88,29 +96,33 @@ class APITestCaseGenerator:
     
     def generate_pytest_testcases(self, test_data_dictionary):                
         for filename in os.listdir(os.getenv('BDDFILESPATH')):
-                    if filename.endswith(".feature"):
-                        content = self.read_file_content(filename)
-                        api_url = filename.replace("_","/").split(".")[0]
-                        task = "Generate pytest test cases for the given BDD test case Scenarios:  " + content+  "Api URL :  "+api_url                 
-                                                
-                        
-                        self.generate_pytest_testcases_for_features(task)
+            if filename.endswith(".feature"):
+                content = self.read_file_content(filename)
+                filenameWithoutExtension = filename.split(".")[0]
+                api_url = filenameWithoutExtension.replace("_","/")
+                task = "Generate pytest test cases for the given " \
+                "BDD test case Scenarios:  " + content+  "" \
+                "Api URL :  "+api_url +"" \
+                "Sample Test Data : "+ json.dumps(test_data_dictionary[api_url] )                                      
+                pytest_testcases = self.generate_pytest_testcases_for_features(task)
+                cleaned_text = self.remove_code_blocks(pytest_testcases,"python")
+                full_bdd_file_path = os.path.join(os.getenv('BDDFILESPATH'), filenameWithoutExtension+"_test.py")
+                save_text_to_file(cleaned_text, full_bdd_file_path)
                         
 
     def generate_pytest_testcases_for_features(self, problem):
         self.assistant.reset()
         chat_history = self.ragproxyagent.initiate_chat(self.assistant, message=self.ragproxyagent.message_generator, problem=problem).chat_history
-
         if chat_history and len(chat_history) > 0:
-    # Iterate through the chat history to find the last assistant message.
-            last_assistant_message = None
-            for message in reversed(chat_history):
-                if message.get("name") == "assistant":
-                    last_assistant_message = message
-                    break
-              
+            # Iterate through the chat history to find the last assistant message.
+                    last_assistant_message = None
+                    for message in reversed(chat_history):
+                        if message.get("name") == "assistant":
+                            last_assistant_message = message
+                            break
+                    
 
-        return last_assistant_message["content"] 
+                    return last_assistant_message["content"] 
 
 
 # qa_system = QuestionAnsweringSystem()

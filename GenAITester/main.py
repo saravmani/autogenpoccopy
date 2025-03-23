@@ -15,6 +15,7 @@ generator = SwaggerTestDataGenerator(api_swagger_url)
 test_data_dictionary = generator.generate_test_data_for_all_endpoints()
 
 
+
 def remove_code_blocks(text, lang): 
   text = text.replace("```"+lang, "")
   text = text.replace("```", "")
@@ -22,43 +23,44 @@ def remove_code_blocks(text, lang):
   return text.strip() 
 
 
-# api_url="/api/users/register"
-# apiname = api_url.replace("/","_") 
-# test_data=json.dumps(test_data_dictionary[api_url])
 
-# # BddGenerator:
-# bdd_generator = BddGenerator(api_url,test_data)
-# task_statement = "Generate BDD Test cases in gherkin language, for the API with the given context, API parameters, API information. Api URL :  "+api_url
-# answer = bdd_generator.generate_bdd_test_cases(task_statement)
-# cleaned_text = remove_code_blocks(answer,"gherkin")
+#######################################################################
 
 
-# full_bdd_file_path = os.path.join(os.getenv('BDDFILESPATH'), apiname+".feature")
-# save_text_to_file(cleaned_text, full_bdd_file_path)
-# # save_text_to_file(cleaned_text, "pytestexplore\\generated\\bdd\\"+apiname+".feature")
-# print("**********************")
-# print("BDD Test cases are generated. You can validate the Feature files. If you want to update BDD Validator agent will hep you to update the test cases")
-# input("Press ENTER to proceed...")
+for api_url, test_data in test_data_dictionary.items():
+  print(f"Generating BDD for and API : {api_url}:\n")
 
-# bdd_validator = BDDValidator()
-# bdd_validator.update_bdd();
- 
-# print("**********************")
-# print("BDD Test cases are updated based on your inputs")
+  # api_url="/api/users/register"
+  apiname = api_url.replace("/","_") 
+  test_data=json.dumps(test_data_dictionary[api_url])
+
+  # BddGenerator:
+  bdd_generator = BddGenerator(api_url,test_data)
+  task_statement = "Generate BDD Test cases in gherkin language, for the API with the given context, API parameters, API information. Api URL :  "+api_url
+  answer = bdd_generator.generate_bdd_test_cases(task_statement)
+  cleaned_text = remove_code_blocks(answer,"gherkin")
+
+  full_bdd_file_path = os.path.join(os.getenv('BDDFILESPATH'), apiname+".feature")
+  save_text_to_file(cleaned_text, full_bdd_file_path) 
 
 
-
-
-
-api_Test_Case_Generator = APITestCaseGenerator(api_base_url,"")
-question = "Generate pytest test cases in python language, for the API with the given context, API parameters, API information. Api URL :  "+api_url
-answer = api_Test_Case_Generator.answer_question(question)
-
-cleaned_text = remove_code_blocks(answer,"python")
-
-full_bdd_file_path = os.path.join(os.getenv('BDDFILESPATH'), apiname+".feature")
-save_text_to_file(cleaned_text, full_bdd_file_path)
-
-save_text_to_file(cleaned_text, "pytestexplore\\generated\\pytest\\"+apiname+"_test.py")
 print("**********************")
-print (cleaned_text)  
+print("BDD Test cases are generated. You can validate the Feature files. If you want to update BDD Validator agent will hep you to update the test cases")
+input("Press ENTER to proceed...")
+
+bdd_validator = BDDValidator()
+bdd_validator.update_bdd();
+ 
+print("**********************")
+print("BDD Test cases are updated based on your inputs")
+
+
+#######################################################################
+
+## Generate the pytest test cases
+api_Test_Case_Generator = APITestCaseGenerator(api_base_url) 
+answer = api_Test_Case_Generator.generate_pytest_testcases(test_data_dictionary)
+ 
+print("**********************")
+
+

@@ -1,0 +1,24 @@
+--- D:\Python\AiAgents\autogenpoccopy\GenAITester\documents\FunctionalDocument.md
++++ D:\Python\AiAgents\autogenpoccopy\GenAITester\documents\FunctionalDocumentmodified.md
+@@ -21,6 +21,7 @@
+     * **Business Validations:**
+         * For the validation error s API should return 400 bad request error
+         * The  Phone number  cannot be duplicated,  If Phone number exists then API should return  the Error Message. (Not JSON)  - Phone number already exists
++        * The  Phone number  length should be 10. if this rule not passed then api should return 400.
+         * The email id cannot be duplicated, If Email already exists then API should return the Error Message as simple string. (Not JSON) - Email already exists
+         * Password should contain minimum 10 chars. Atleast 1 special character and 1 Capital letter and one Number and one small letter. If password policy not matches then API should return 400 response.
+         
+@@ -38,7 +39,7 @@
+ 
+     * **Security:** Requires no authentication.
+ * **4.1.2. User Login (`/api/users/login` - POST)**
+-    * **Description:** Authenticates users and generates a session token.
++    * **Description:** Authenticates users by accepting email address and password and generates a JWT token.
+     * **Input:** A JSON object conforming to the `LoginRequest` schema, containing:
+         * `identifier` (string, required) - represents username or email.
+         * `password` (string, required)
+@@ -153,4 +154,4 @@
+ ## 9. Deployment
+ 
+ * The API should be deployed on a secure and reliable server.
+-* The server url for development is : `http://localhost:8080`.+* The server url for development is : `http://localhost:8080`.
