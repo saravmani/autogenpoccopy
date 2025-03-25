@@ -1,53 +1,31 @@
-Feature: User Login Authentication
+Feature: User Login
 
-  Background:
-    Given the server url is "http://localhost:8080"
+  Scenario: Successful login with valid credentials
+    Given the API endpoint "/api/users/login" is available
+    When I send a POST request with valid identifier "daughter" and password "Hx%4L7sy*M"
+    Then I should receive a 200 OK status code
+    And the response should contain an authentication token
 
-  Scenario: Successful User Login
-    Given the user provides a valid "identifier" as "require"
-    And the user provides a valid "password" as "b960&LRc_O"
-    When the user sends a POST request to "/api/users/login"
-    Then the response status code should be 200
-    And the response should contain a JWT token
+  Scenario: Unsuccessful login with invalid credentials
+    Given the API endpoint "/api/users/login" is available
+    When I send a POST request with identifier "daughter" and incorrect password "wrongPassword123!"
+    Then I should receive a 401 Unauthorized status code
+    And an error message "Invalid credentials" should be returned
 
-  Scenario: Login with Invalid Password
-    Given the user provides a valid "identifier" as "require"
-    And the user provides an invalid "password" as "wrongPassword"
-    When the user sends a POST request to "/api/users/login"
-    Then the response status code should not be 200
-    And the response should contain an error message
+  Scenario: Unsuccessful login with missing password
+    Given the API endpoint "/api/users/login" is available
+    When I send a POST request with identifier "daughter" and no password
+    Then I should receive a 400 Bad Request status code
+    And an error message "Password is required" should be returned
 
-  Scenario: Login with Non-Existing User
-    Given the user provides a non-existing "identifier" as "nonexisting@domain.com"
-    And the user provides a valid "password" as "b960&LRc_O"
-    When the user sends a POST request to "/api/users/login"
-    Then the response status code should not be 200
-    And the response should contain an error message
+  Scenario: Unsuccessful login with missing identifier
+    Given the API endpoint "/api/users/login" is available
+    When I send a POST request with no identifier and password "Hx%4L7sy*M"
+    Then I should receive a 400 Bad Request status code
+    And an error message "Identifier is required" should be returned
 
-  Scenario: Missing Password Field in Request
-    Given the user provides a valid "identifier" as "require"
-    And the user does not provide a "password"
-    When the user sends a POST request to "/api/users/login"
-    Then the response status code should be 400
-    And the response should contain an error message
-
-  Scenario: Missing Identifier Field in Request
-    Given the user does not provide an "identifier"
-    And the user provides a valid "password" as "b960&LRc_O"
-    When the user sends a POST request to "/api/users/login"
-    Then the response status code should be 400
-    And the response should contain an error message
-
-  Scenario: Empty Request Body
-    Given the user does not provide any input
-    When the user sends a POST request to "/api/users/login"
-    Then the response status code should be 400
-    And the response should contain an error message
-
-  Scenario: Incorrect Content Type
-    Given the user provides a valid "identifier" as "require"
-    And the user provides a valid "password" as "b960&LRc_O"
-    And the Content-Type is set to "text/plain"
-    When the user sends a POST request to "/api/users/login"
-    Then the response status code should be 415
-    And the response should contain an error message
+  Scenario: Unsuccessful login with invalid identifier type
+    Given the API endpoint "/api/users/login" is available
+    When I send a POST request with identifier as number 123456 and password "Hx%4L7sy*M"
+    Then I should receive a 400 Bad Request status code
+    And an error message "Invalid identifier format" should be returned

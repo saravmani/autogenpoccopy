@@ -1,86 +1,102 @@
+Here's the pytest code for the given BDD scenarios:
+
+
 import pytest
 import requests
 
-BASE_URL = "http://localhost:8080/api/users"
+BASE_URL = "http://localhost:8080"
 
 @pytest.fixture
-def prepare_existing_user():
-    existing_user_data = {
-        "name": "John Existing",
-        "password": "strongP@ssw0rd",
-        "email": "john.existing@gmail.com",
-        "countryCode": "IN",
-        "phoneNumber": "9999999999",
-        "address": "123 Existing St"
-    }
-    requests.post(f"{BASE_URL}/register", json=existing_user_data)
+def create_user():
+    def _create_user(user_data):
+        response = requests.post(f"{BASE_URL}/api/users/register", json=user_data)
+        return response
+    return _create_user
 
-def test_successfully_register_new_user():
-    new_user_data = {
+def test_successful_registration(create_user):
+    user_details = {
         "name": "John Doe",
-        "password": "P@ssw0rd123!",
-        "email": "john.doe@gmail.com",
+        "password": "Secure#1234",
+        "email": "john.doe@example.com",
         "countryCode": "IN",
         "phoneNumber": "9876543210",
-        "address": "123 Elm Street"
+        "address": "123 Main St, New Delhi"
     }
-    response = requests.post(f"{BASE_URL}/register", json=new_user_data)
+    response = create_user(user_details)
     assert response.status_code == 200
     response_data = response.json()
     assert response_data["name"] == "John Doe"
-    assert response_data["email"] == "john.doe@gmail.com"
+    assert response_data["email"] == "john.doe@example.com"
     assert response_data["countryCode"] == "IN"
     assert response_data["phoneNumber"] == "9876543210"
-    assert response_data["address"] == "123 Elm Street"
+    assert response_data["address"] == "123 Main St, New Delhi"
 
-def test_registration_fails_due_to_existing_email(prepare_existing_user):
-    conflicting_user_data = {
-        "name": "Jane Smith",
-        "password": "Example$123!",
-        "email": "john.existing@gmail.com",
+def test_registration_duplicate_phone_number(create_user):
+    existing_user = {
+        "name": "Existing User",
+        "password": "Secure#1234",
+        "email": "existing.user@example.com",
         "countryCode": "IN",
-        "phoneNumber": "1234567890",
-        "address": "456 Oak Avenue"
+        "phoneNumber": "9876543210",
+        "address": "123 Main St, New Delhi"
     }
-    response = requests.post(f"{BASE_URL}/register", json=conflicting_user_data)
-    assert response.status_code == 400
-    assert response.text == "Email already exists"
-
-def test_registration_fails_due_to_existing_phone_number(prepare_existing_user):
-    conflicting_user_data = {
-        "name": "Mike Ross",
-        "password": "Secure$345!",
-        "email": "mike.ross@gmail.com",
+    create_user(existing_user)  # Preset an existing user
+    
+    duplicate_user = {
+        "name": "Jane Doe",
+        "password": "AnotherSecure#1234",
+        "email": "jane.doe@example.com",
         "countryCode": "IN",
-        "phoneNumber": "9999999999",
-        "address": "789 Pine Road"
+        "phoneNumber": "9876543210",
+        "address": "456 Second St, Mumbai"
     }
-    response = requests.post(f"{BASE_URL}/register", json=conflicting_user_data)
+    response = create_user(duplicate_user)
     assert response.status_code == 400
     assert response.text == "Phone number already exists"
 
-def test_registration_fails_due_to_invalid_password_policy():
-    weak_password_user_data = {
-        "name": "Weak Password",
-        "password": "weakpass",
-        "email": "weak.pass@gmail.com",
+def test_registration_duplicate_email(create_user):
+    existing_user = {
+        "name": "Existing User",
+        "password": "Secure#1234",
+        "email": "jane.doe@example.com",
         "countryCode": "IN",
-        "phoneNumber": "0987654321",
-        "address": "321 Birch Lane"
+        "phoneNumber": "9876549999",
+        "address": "123 Main St, New Delhi"
     }
-    response = requests.post(f"{BASE_URL}/register", json=weak_password_user_data)
+    create_user(existing_user)  # Preset an existing user
+    
+    duplicate_email_user = {
+        "name": "Jim Doe",
+        "password": "GoodPass#5678",
+        "email": "jane.doe@example.com",
+        "countryCode": "IN",
+        "phoneNumber": "9876543219",
+        "address": "789 Third St, Chennai"
+    }
+    response = create_user(duplicate_email_user)
+    assert response.status_code == 400
+    assert response.text == "Email already exists"
+
+def test_registration_invalid_password(create_user):
+    invalid_password_user = {
+        "name": "Jake Doe",
+        "password": "simplepass",
+        "email": "jake.doe@example.com",
+        "countryCode": "IN",
+        "phoneNumber": "9876543220",
+        "address": "101 First St, Kolkata"
+    }
+    response = create_user(invalid_password_user)
     assert response.status_code == 400
 
-def test_registration_fails_due_to_missing_required_fields():
-    missing_fields_user_data = {
-        "name": "Missing Details",
-        "password": "MissingPass1!",
-        "email": "",
+def test_registration_invalid_phone_number_length(create_user):
+    invalid_phone_user = {
+        "name": "Lara Doe",
+        "password": "Complex#1234",
+        "email": "lara.doe@example.com",
         "countryCode": "IN",
-        "phoneNumber": "",
-        "address": ""
+        "phoneNumber": "98765",
+        "address": "303 Fourth St, Bangalore"
     }
-    response = requests.post(f"{BASE_URL}/register", json=missing_fields_user_data)
+    response = create_user(invalid_phone_user)
     assert response.status_code == 400
-
- 

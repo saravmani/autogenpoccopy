@@ -69,7 +69,7 @@ class APITestCaseGenerator:
             retrieve_config={
                 "task": "qa",
                 # "docs_path": "https://raw.githubusercontent.com/saravmani/mycloud/refs/heads/master/Rem/FunctionalDocument.md",        
-                "docs_path": "./documents",
+                "docs_path":  os.getenv('FUNCTIONAL_DOCS_PATH'),
                 "embedding_function": openai_ef,
                 "get_or_create": True,
                 "chunk_token_size": 2000,
@@ -86,6 +86,7 @@ class APITestCaseGenerator:
     def remove_code_blocks(self,text, lang): 
         text = text.replace("```"+lang, "")
         text = text.replace("```", "") 
+        text = text.replace("TERMINATE", "")
         return text.strip() 
     
     def read_file_content(self, file_name):

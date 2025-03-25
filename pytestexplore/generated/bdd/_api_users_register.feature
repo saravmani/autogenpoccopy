@@ -1,27 +1,31 @@
 Feature: User Registration
 
-  Scenario: Successful registration
-    Given a new user with name "reveal", password "#EmHS5Yk21", email "reveal@example.com", countryCode "IN", phoneNumber "1234567890", address "123 Main St, City"
-    When the user registers with the banking portal
+  Scenario: Successfully register a new user
+    Given I have user details with name "John Doe", password "Secure#1234", email "john.doe@example.com", country code "IN", phone number "9876543210", address "123 Main St, New Delhi"
+    When I POST the user registration details to "/api/users/register"
     Then the response status should be 200
-    And the response should contain account details excluding the password
+    And the response should contain the user's name, email, country code "IN", phone number "9876543210", address, and account details
 
-  Scenario: Registration with existing email
-    Given an existing user with email "existing@example.com"
-    When a new user registers with name "newuser", password "#EmHS5Yk21", email "existing@example.com", countryCode "IN", phoneNumber "0987654321", address "456 Main St, City"
-    Then the response should be an error message "Email already exists"
-    And the response status should be 400
+  Scenario: Register user with duplicate phone number
+    Given a user already exists with phone number "9876543210"
+    And I have user details with name "Jane Doe", password "AnotherSecure#1234", email "jane.doe@example.com", country code "IN", phone number "9876543210", address "456 Second St, Mumbai"
+    When I POST the user registration details to "/api/users/register"
+    Then the response status should be 400
+    And the response should be the error message "Phone number already exists"
 
-  Scenario: Registration with existing phone number
-    Given an existing user with phoneNumber "1234567890"
-    When a new user registers with name "anotheruser", password "#EmHS5Yk21", email "another@example.com", countryCode "IN", phoneNumber "1234567890", address "789 Main St, City"
-    Then the response should be an error message "Phone number already exists"
-    And the response status should be 400
+  Scenario: Register user with duplicate email
+    Given a user already exists with email "jane.doe@example.com"
+    And I have user details with name "Jim Doe", password "GoodPass#5678", email "jane.doe@example.com", country code "IN", phone number "9876543219", address "789 Third St, Chennai"
+    When I POST the user registration details to "/api/users/register"
+    Then the response status should be 400
+    And the response should be the error message "Email already exists"
 
-  Scenario: Registration with invalid phone number length
-    When the user registers with name "invalid", password "#EmHS5Yk21", email "invalid@example.com", countryCode "IN", phoneNumber "1234", address "1010 Main St, City"
+  Scenario: Register user with invalid password
+    Given I have user details with name "Jake Doe", password "simplepass", email "jake.doe@example.com", country code "IN", phone number "9876543220", address "101 First St, Kolkata"
+    When I POST the user registration details to "/api/users/register"
     Then the response status should be 400
 
-  Scenario: Registration with weak password
-    When the user registers with name "weakpassword", password "password", email "weak@example.com", countryCode "IN", phoneNumber "2345678901", address "1020 Main St, City"
+  Scenario: Register user with invalid phone number length
+    Given I have user details with name "Lara Doe", password "Complex#1234", email "lara.doe@example.com", country code "IN", phone number "98765", address "303 Fourth St, Bangalore"
+    When I POST the user registration details to "/api/users/register"
     Then the response status should be 400

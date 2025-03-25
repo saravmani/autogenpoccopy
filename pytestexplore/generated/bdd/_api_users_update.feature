@@ -1,48 +1,41 @@
 Feature: User Update API
 
-  Background:
-    Given an existing user with the following details:
-      | id   | name | email       | phoneNumber | password     | countryCode | address  |
-      | 589  | time | financial   | 1234567890  | @yLh(Zdui6z  | IN          | anything |
-
-  Scenario: Successfully update user information
-    Given I am authenticated with a valid Bearer token
-    When I send a POST request to "/api/users/update" with the following JSON payload:
-      """
-      {
-        "id": 589,
-        "name": "newName",
-        "email": "newemail@example.com",
-        "phoneNumber": "1234567899",
-        "password": "@yLh(Zdui6z",
-        "countryCode": "IN",
-        "address": "new address"
-      }
-      """
+  Scenario: Successful user profile update
+    Given a user with ID 679 exists
+    And I have a valid Bearer token
+    When I send a PATCH request to "/api/users/update" with the following data:
+      | id          | name      | password    | email         | countryCode | phoneNumber | address      |
+      | 679         | increase  | Fu%0Pny5HR  | administration| explain     | myself      | easy         |
     Then the response status code should be 200
-    And the response body should indicate success
+    And the response should indicate a successful update
 
-  Scenario: Update user with existing email
-    Given I am authenticated with a valid Bearer token
-    And an existing user with email "financial" exists
-    When I send a POST request to "/api/users/update" with JSON payload where email is "financial"
-    Then the response status code should be 400
-    And the response body should be a simple string 
-    And the response should indicate "Email already exists"
+  Scenario: Unauthorized access without Bearer token
+    Given a user with ID 679 exists
+    When I send a PATCH request to "/api/users/update" without a Bearer token
+    Then the response status code should be 401
+    And the response should indicate an authentication failure
 
-  Scenario: Update user with duplicate phone number
-    Given I am authenticated with a valid Bearer token
-    And an existing user with phone number "single" exists
-    When I send a POST request to "/api/users/update" with JSON payload where phoneNumber is "single"
+  Scenario: Update with invalid email
+    Given a user with ID 679 exists
+    And I have a valid Bearer token
+    When I send a PATCH request to "/api/users/update" with the following invalid email data:
+      | id          | name      | password    | email         | countryCode | phoneNumber | address      |
+      | 679         | increase  | Fu%0Pny5HR  | invalid-email | explain     | myself      | easy         |
     Then the response status code should be 400
-    And the response body should indicate "Phone number already exists"
+    And the response should indicate an email validation failure
 
-  Scenario: Update user with invalid phone number length
-    Given I am authenticated with a valid Bearer token
-    When I send a POST request to "/api/users/update" with a JSON payload where phoneNumber length is less than 10
+  Scenario: Update with existing email
+    Given a user with ID 680 exists with email "administration"
+    And I have a valid Bearer token
+    When I send a PATCH request to "/api/users/update" with the following data:
+      | id          | name      | password    | email         | countryCode | phoneNumber | address      |
+      | 679         | increase  | Fu%0Pny5HR  | administration| explain     | myself      | easy         |
     Then the response status code should be 400
+    And the response should indicate that email already exists
 
-  Scenario: Update user with invalid password policy
-    Given I am authenticated with a valid Bearer token
-    When I send a POST request to "/api/users/update" with a JSON payload where password does not meet policy criteria
+  Scenario: Update with missing required fields
+    Given a user with ID 679 exists
+    And I have a valid Bearer token
+    When I send a PATCH request to "/api/users/update" with missing required fields
     Then the response status code should be 400
+    And the response should indicate field validation errors
