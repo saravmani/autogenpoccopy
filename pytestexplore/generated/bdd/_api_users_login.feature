@@ -1,31 +1,29 @@
-Feature: User Login
+Feature: User Login API
 
-  Scenario: Successful login with valid credentials
-    Given the API endpoint "/api/users/login" is available
-    When I send a POST request with valid identifier "daughter" and password "Hx%4L7sy*M"
-    Then I should receive a 200 OK status code
-    And the response should contain an authentication token
+  Background:
+    Given a user with identifier "genai_test_user@example.com" and password "Secure#1234"
 
-  Scenario: Unsuccessful login with invalid credentials
-    Given the API endpoint "/api/users/login" is available
-    When I send a POST request with identifier "daughter" and incorrect password "wrongPassword123!"
-    Then I should receive a 401 Unauthorized status code
-    And an error message "Invalid credentials" should be returned
+  Scenario: Successful login
+    When the user attempts to login with identifier "genai_test_user@example.com" and password "Secure#1234"
+    Then the response status code should be 200
+    And the response should contain a token
 
-  Scenario: Unsuccessful login with missing password
-    Given the API endpoint "/api/users/login" is available
-    When I send a POST request with identifier "daughter" and no password
-    Then I should receive a 400 Bad Request status code
-    And an error message "Password is required" should be returned
+  Scenario: Login with incorrect password
+    When the user attempts to login with identifier "genai_test_user@example.com" and password "wrong_password"
+    Then the response status code should be 401
+    And the response should contain an error message indicating invalid credentials
 
-  Scenario: Unsuccessful login with missing identifier
-    Given the API endpoint "/api/users/login" is available
-    When I send a POST request with no identifier and password "Hx%4L7sy*M"
-    Then I should receive a 400 Bad Request status code
-    And an error message "Identifier is required" should be returned
+  Scenario: Login with incorrect identifier
+    When the user attempts to login with identifier "wrong_user@example.com" and password "Secure#1234"
+    Then the response status code should be 401
+    And the response should contain an error message indicating invalid credentials
 
-  Scenario: Unsuccessful login with invalid identifier type
-    Given the API endpoint "/api/users/login" is available
-    When I send a POST request with identifier as number 123456 and password "Hx%4L7sy*M"
-    Then I should receive a 400 Bad Request status code
-    And an error message "Invalid identifier format" should be returned
+  Scenario: Login with missing identifier
+    When the user attempts to login with empty identifier and password "Secure#1234"
+    Then the response status code should be 400
+    And the response should contain an error message indicating missing identifier
+
+  Scenario: Login with missing password
+    When the user attempts to login with identifier "genai_test_user@example.com" and empty password
+    Then the response status code should be 400
+    And the response should contain an error message indicating missing password

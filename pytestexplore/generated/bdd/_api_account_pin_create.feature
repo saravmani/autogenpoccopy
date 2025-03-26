@@ -1,33 +1,31 @@
 Feature: Create PIN for Account
-  In order to secure my account
-  As an account holder
-  I want to be able to create a PIN using /api/account/pin/create
 
   Background:
-    Given a valid Bearer token for user authentication
+    Given the endpoint "/api/account/pin/create" is available
+    And a valid Bearer token is obtained using identifier "genai_test_user@example.com" and password "Secure#1234"
 
-  Scenario: Successfully create a new PIN
-    Given I have the following account information
-      | accountNumber | pin     | password     |
-      | 1234567890    | 1234    | _#61ZRiE#1   |
-    When I send a POST request to /api/account/pin/create with this data
-    Then I should receive a success message
+  Scenario: Successfully create a new PIN for an account
+    Given a valid JSON request payload with accountNumber "856899", pin "1234", and password "Secure#1234"
+    When a POST request is made to "/api/account/pin/create" with the payload and Bearer token
+    Then the response status code should be 200
+    And the response should indicate success
 
-  Scenario: Fail to create PIN with an existing PIN
-    Given I have already created a PIN with accountNumber "1234567890"
-    When I attempt to create a PIN again for the same account with the same details
-    Then I should receive an error message indicating duplicate PIN creation
-  
-  Scenario: Fail to create PIN due to invalid password
-    Given I have the following account information with invalid password
-      | accountNumber | pin     | password |
-      | 1234567890    | 1234    | password123 |
-    When I send a POST request to /api/account/pin/create with this data
-    Then I should receive an error message indicating invalid password
+  Scenario: Fail to create PIN with invalid Bearer token
+    Given a valid JSON request payload with accountNumber "856899", pin "1234", and password "Secure#1234"
+    And an invalid Bearer token
+    When a POST request is made to "/api/account/pin/create" with the payload and invalid token
+    Then the response status code should be 401
+    And the response should indicate authentication failure
 
-  Scenario: Fail to create PIN due to missing field
-    Given I have the following account information
-      | accountNumber | pin  | password   |
-      | 1234567890    |      | _#61ZRiE#1 |
-    When I send a POST request to /api/account/pin/create with this data
-    Then I should receive an error message indicating missing pin field
+  Scenario: Fail to create PIN with duplicate accountNumber and PIN
+    Given a valid JSON request payload with accountNumber "856899", pin "1234", and password "Secure#1234"
+    And a successful PIN creation request has already been performed
+    When a POST request is made to "/api/account/pin/create" with the same payload and Bearer token
+    Then the response status code should not be 200
+    And the response should indicate failure due to duplicate PIN creation
+
+  Scenario: Fail to create PIN with missing required fields
+    Given an invalid JSON request payload missing "pin"
+    When a POST request is made to "/api/account/pin/create" with the invalid payload and Bearer token
+    Then the response status code should be 400
+    And the response should indicate missing required fields

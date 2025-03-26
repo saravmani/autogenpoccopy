@@ -1,59 +1,29 @@
-Feature: Password Reset for Banking Portal API
+Feature: Password Reset
 
-  Scenario: Successfully reset password
-    Given the user provides a valid identifier and a strong new password
-    When the user sends a POST request to "/api/auth/password-reset" with the payload:
-      """
-      {
-        "identifier": "source",
-        "newPassword": "g0LJL)dK(Y"
-      }
-      """
-    Then the response status should be 200
-    And the response message should indicate a successful password reset
+  Background:
+    Given a user with email "genai_test_user@example.com" and password "Secure#1234"
+    
+  Scenario: Successfully reset the password
+    Given I have access to the password reset API
+    When I provide the identifier as "prevent" and new password as "x73TrJMp_!"
+    Then the response should be a success message indicating password reset
 
-  Scenario: Attempt to reset password with an invalid identifier
-    Given the user provides an invalid identifier
-    When the user sends a POST request to "/api/auth/password-reset" with the payload:
-      """
-      {
-        "identifier": "invalid_user",
-        "newPassword": "g0LJL)dK(Y"
-      }
-      """
-    Then the response status should be 400
-    And the response message should indicate identifier not found
+  Scenario: Missing identifier
+    Given I have access to the password reset API
+    When I provide no identifier and new password as "x73TrJMp_!"
+    Then the response should indicate a failure due to missing identifier
 
-  Scenario: Attempt to reset password with a weak new password
-    Given the user provides a valid identifier and a weak new password
-    When the user sends a POST request to "/api/auth/password-reset" with the payload:
-      """
-      {
-        "identifier": "source",
-        "newPassword": "weak"
-      }
-      """
-    Then the response status should be 400
-    And the response message should indicate password strength requirement not met
+  Scenario: Missing new password
+    Given I have access to the password reset API
+    When I provide the identifier as "prevent" and no new password
+    Then the response should indicate a failure due to missing new password
 
-  Scenario: Attempting password reset with missing identifier
-    Given the user provides a strong new password but no identifier
-    When the user sends a POST request to "/api/auth/password-reset" with the payload:
-      """
-      {
-        "newPassword": "g0LJL)dK(Y"
-      }
-      """
-    Then the response status should be 400
-    And the response message should indicate missing identifier
+  Scenario: New password does not meet policy
+    Given I have access to the password reset API
+    When I provide the identifier as "prevent" and new password as "short"
+    Then the response should indicate a failure due to password policy not being met
 
-  Scenario: Attempting password reset with missing new password
-    Given the user provides an identifier but no new password
-    When the user sends a POST request to "/api/auth/password-reset" with the payload:
-      """
-      {
-        "identifier": "source"
-      }
-      """
-    Then the response status should be 400
-    And the response message should indicate missing password
+  Scenario: Reset password with non-existing identifier
+    Given I have access to the password reset API
+    When I provide a non-existing identifier as "nonexistent@example.com" and new password as "x73TrJMp_!"
+    Then the response should indicate a failure due to non-existing user identifier

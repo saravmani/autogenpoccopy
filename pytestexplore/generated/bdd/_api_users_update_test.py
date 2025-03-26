@@ -1,78 +1,57 @@
 import pytest
 import requests
+import time
 
+DELAY_SECONDS = 1
 BASE_URL = "http://localhost:8080"
+TOKEN_URL = f"{BASE_URL}/api/users/login"
+USER_UPDATE_URL = f"{BASE_URL}/api/users/update"
 
-@pytest.fixture
-def valid_token():
-    # Simulated method to get a valid token
-    response = requests.post(f"{BASE_URL}/api/users/login", json={
-        "identifier": "valid_user",
-        "password": "valid_password"
+def get_bearer_token():
+    response = requests.post(TOKEN_URL, json={
+        "identifier": "genai_test_user@example.com",
+        "password": "Secure#1234"
     })
-    return response.text if response.status_code == 200 else None
+    return response.json().get("token")
 
-@pytest.fixture
-def create_user_679():
-    # Assume code exists to create and ensure user 679 exists
-    return 679
-
-@pytest.fixture
-def create_user_680():
-    # Assume code exists to create and ensure user 680 with "administration" email exists
-    return 680
-
-def test_successful_user_update(create_user_679, valid_token):
-    headers = {"Authorization": f"Bearer {valid_token}"}
-    data = {
-        "id": 679,
-        "name": "increase",
-        "password": "Fu%0Pny5HR",
-        "email": "administration",
-        "countryCode": "explain",
-        "phoneNumber": "myself",
-        "address": "easy"
+def test_successful_update_user_details():
+    token = get_bearer_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = {
+        "id": 759,
+        "name": "updatedName",
+        "email": "updatedEmail",
+        "countryCode": "newCountry",
+        "phoneNumber": "newPhone",
+        "address": "newEnvironment"
     }
-    response = requests.patch(f"{BASE_URL}/api/users/update", headers=headers, json=data)
+    response = requests.post(USER_UPDATE_URL, headers=headers, json=payload)
     assert response.status_code == 200
-    assert "success" in response.text.lower()
+    time.sleep(DELAY_SECONDS)
 
-def test_unauthorized_access_without_token(create_user_679):
-    data = {
-        "id": 679,
-        "name": "increase",
+def test_update_user_details_invalid_token():
+    headers = {"Authorization": "Bearer invalidtoken"}
+    payload = {
+        "id": 759,
+        "name": "updatedName",
+        "email": "updatedEmail",
+        "countryCode": "newCountry",
+        "phoneNumber": "newPhone"
     }
-    response = requests.patch(f"{BASE_URL}/api/users/update", json=data)
+    response = requests.post(USER_UPDATE_URL, headers=headers, json=payload)
     assert response.status_code == 401
-    assert "authentication failure" in response.text.lower()
+    time.sleep(DELAY_SECONDS)
 
-def test_update_with_invalid_email(create_user_679, valid_token):
-    headers = {"Authorization": f"Bearer {valid_token}"}
-    data = {
-        "id": 679,
-        "name": "increase",
-        "password": "Fu%0Pny5HR",
-        "email": "invalid-email",
+def test_update_user_details_missing_fields():
+    token = get_bearer_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = {
+        "id": 759,
+        "name": "updatedName",
+        "countryCode": "newCountry",
+        "phoneNumber": "newPhone",
+        "address": "newEnvironment"
     }
-    response = requests.patch(f"{BASE_URL}/api/users/update", headers=headers, json=data)
+    response = requests.post(USER_UPDATE_URL, headers=headers, json=payload)
     assert response.status_code == 400
-    assert "email validation failure" in response.text.lower()
-
-def test_update_with_existing_email(create_user_679, create_user_680, valid_token):
-    headers = {"Authorization": f"Bearer {valid_token}"}
-    data = {
-        "id": 679,
-        "name": "increase",
-        "password": "Fu%0Pny5HR",
-        "email": "administration",
-    }
-    response = requests.patch(f"{BASE_URL}/api/users/update", headers=headers, json=data)
-    assert response.status_code == 400
-    assert "email already exists" in response.text.lower()
-
-def test_update_with_missing_fields(create_user_679, valid_token):
-    headers = {"Authorization": f"Bearer {valid_token}"}
-    data = {"id": 679}  # Missing other required fields
-    response = requests.patch(f"{BASE_URL}/api/users/update", headers=headers, json=data)
-    assert response.status_code == 400
-    assert "field validation errors" in response.text.lower()
+    time.sleep(DELAY_SECONDS)

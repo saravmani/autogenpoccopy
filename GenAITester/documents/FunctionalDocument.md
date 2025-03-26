@@ -42,7 +42,7 @@ This document covers the functionalities defined in the Swagger document, includ
     * **Input:** A JSON object conforming to the `LoginRequest` schema, containing:
         * `identifier` (string, required) - represents username or email.
         * `password` (string, required)
-    * **Output:** A string containing the authentication token or an error message.
+    * **Output:** On Successful login the API will return a json { "token": "<bearer token value>" }
     * **Security:** Requires no authentication.
 * **4.1.3. User Update (`/api/users/update` - POST)**
     * **Description:** Allows users to update their profile information.
@@ -59,20 +59,30 @@ This document covers the functionalities defined in the Swagger document, includ
 
 ### 4.2. Account Management
 
-* **4.2.1. Cash Deposit (`/api/account/deposit` - POST)**
-    * **Description:** this like facebook account
+* **4.2.1. Cash Deposit (`/api/account/deposit` - POST)**    
+    * Need to login to the applicaiton using api/users/login before performing this  
+    * **Description:** Helps user to deposit the money
+        * Validations  
+            1. Amount cannot be greater than 100,000
+            2. Amount must be in multiples of 100
+            3. Amount must be greater than 0
+            4. Invalid amount
+            
     * **Input:** A JSON object conforming to the `AmountRequest` schema, containing:
         * `accountNumber` (string, required)
         * `pin` (string, required)
         * `amount` (number, double, required)
-    * **Output:** A string indicating the success or failure of the deposit.
-    * **Security:** Requires Bearer token authentication.
+    * **Output:** 
+        * On successful deplosit applicaiton will return 200 status code. 
+        * If in valid authentication token porvided then application will return just 401 error message
+    * **Security:** Requires Bearer token authentication. 
 * **4.2.2. Cash Withdrawal (`/api/account/withdraw` - POST)**
+    * Need to login to the applicaiton using api/users/login before performing this  
     * **Description:** Allows users to withdraw funds from their account.
     * **Input:** A JSON object conforming to the `AmountRequest` schema, containing:
         * `accountNumber` (string, required)
         * `pin` (string, required)
-        * `amount` (number, double, required)
+        * `amount` (number,  required)  - The amount should be in multiplies of 100
     * **Output:** A string indicating the success or failure of the withdrawal.
     * **Security:** Requires Bearer token authentication.
 * **4.2.3. Fund Transfer (`/api/account/fund-transfer` - POST)**
@@ -80,7 +90,7 @@ This document covers the functionalities defined in the Swagger document, includ
     * **Input:** A JSON object conforming to the `FundTransferRequest` schema, containing:
         * `sourceAccountNumber` (string, required)
         * `targetAccountNumber` (string, required)
-        * `amount` (number, double, required)
+        * `amount` (number, double, required) - The amount should be in multiplies of 100 s
         * `pin` (string, required)
     * **Output:** A string indicating the success or failure of the fund transfer.
     * **Security:** Requires Bearer token authentication.

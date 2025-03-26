@@ -1,62 +1,69 @@
+Here are pytest test cases for the given scenarios:
+
+
 import pytest
 import requests
+import time
 
+DELAY_SECONDS = 1
 BASE_URL = "http://localhost:8080"
 
-def test_successful_cash_deposit():
-    token = "valid-auth-token"  # Replace with a valid auth token
-    headers = {"Authorization": f"Bearer {token}"}
-    data = {
-        "accountNumber": "1234567890",
-        "pin": "1234",
-        "amount": 195.94
-    }
-    response = requests.post(f"{BASE_URL}/api/account/deposit", json=data, headers=headers)
+@pytest.fixture
+def get_bearer_token():
+    response = requests.post(f"{BASE_URL}/api/users/login", json={
+        "identifier": "genai_test_user@example.com",
+        "password": "Secure#1234"
+    })
+    token = response.json().get('token')
     assert response.status_code == 200
-    assert response.text == "Deposit successful"
+    return token
 
-def test_deposit_with_invalid_account_number():
-    token = "valid-auth-token"  # Replace with a valid auth token
-    headers = {"Authorization": f"Bearer {token}"}
-    data = {
-        "accountNumber": "9999999999",
+def test_successful_cash_deposit(get_bearer_token):
+    headers = {"Authorization": f"Bearer {get_bearer_token}"}
+    response = requests.post(f"{BASE_URL}/api/account/deposit", headers=headers, json={
+        "accountNumber": "856899",
         "pin": "1234",
-        "amount": 200.00
-    }
-    response = requests.post(f"{BASE_URL}/api/account/deposit", json=data, headers=headers)
-    assert response.status_code == 400
-    assert response.text == "Invalid account number"
+        "amount": 500
+    })
+    assert response.status_code == 200
+    time.sleep(DELAY_SECONDS)
 
-def test_deposit_with_incorrect_pin():
-    token = "valid-auth-token"  # Replace with a valid auth token
-    headers = {"Authorization": f"Bearer {token}"}
-    data = {
-        "accountNumber": "1234567890",
-        "pin": "0000",
-        "amount": 100.00
-    }
-    response = requests.post(f"{BASE_URL}/api/account/deposit", json=data, headers=headers)
-    assert response.status_code == 400
-    assert response.text == "Incorrect pin"
-
-def test_deposit_without_authentication_token():
-    data = {
-        "accountNumber": "1234567890",
+def test_deposit_amount_greater_than_100000(get_bearer_token):
+    headers = {"Authorization": f"Bearer {get_bearer_token}"}
+    response = requests.post(f"{BASE_URL}/api/account/deposit", headers=headers, json={
+        "accountNumber": "856899",
         "pin": "1234",
-        "amount": 150.00
-    }
-    response = requests.post(f"{BASE_URL}/api/account/deposit", json=data)
+        "amount": 100500
+    })
+    assert response.status_code != 200
+    time.sleep(DELAY_SECONDS)
+
+def test_deposit_invalid_amount_not_in_multiples_of_100(get_bearer_token):
+    headers = {"Authorization": f"Bearer {get_bearer_token}"}
+    response = requests.post(f"{BASE_URL}/api/account/deposit", headers=headers, json={
+        "accountNumber": "856899",
+        "pin": "1234",
+        "amount": 527
+    })
+    assert response.status_code != 200
+    time.sleep(DELAY_SECONDS)
+
+def test_deposit_amount_less_than_or_equal_zero(get_bearer_token):
+    headers = {"Authorization": f"Bearer {get_bearer_token}"}
+    response = requests.post(f"{BASE_URL}/api/account/deposit", headers=headers, json={
+        "accountNumber": "856899",
+        "pin": "1234",
+        "amount": 0
+    })
+    assert response.status_code != 200
+    time.sleep(DELAY_SECONDS)
+
+def test_deposit_invalid_authentication_token():
+    headers = {"Authorization": "Bearer invalid_token"}
+    response = requests.post(f"{BASE_URL}/api/account/deposit", headers=headers, json={
+        "accountNumber": "856899",
+        "pin": "1234",
+        "amount": 500
+    })
     assert response.status_code == 401
-    assert response.text == "Authentication required"
-
-def test_deposit_with_invalid_amount_format():
-    token = "valid-auth-token"  # Replace with a valid auth token
-    headers = {"Authorization": f"Bearer {token}"}
-    data = {
-        "accountNumber": "1234567890",
-        "pin": "1234",
-        "amount": "ABC"
-    }
-    response = requests.post(f"{BASE_URL}/api/account/deposit", json=data, headers=headers)
-    assert response.status_code == 400
-    assert response.text == "Invalid amount format"
+    time.sleep(DELAY_SECONDS)

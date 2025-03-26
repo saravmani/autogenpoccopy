@@ -1,41 +1,35 @@
 Feature: User Update API
 
-  Scenario: Successful user profile update
-    Given a user with ID 679 exists
-    And I have a valid Bearer token
-    When I send a PATCH request to "/api/users/update" with the following data:
-      | id          | name      | password    | email         | countryCode | phoneNumber | address      |
-      | 679         | increase  | Fu%0Pny5HR  | administration| explain     | myself      | easy         |
-    Then the response status code should be 200
-    And the response should indicate a successful update
+  Background:
+    Given a user exists with the following details:
+      | id    | name   | password   | email                    | countryCode | phoneNumber | address        |
+      | 759   | little | Kyz905AzO$ | data                     | medical     | sea         | environment    |
+    And the user is authenticated with a valid Bearer token
 
-  Scenario: Unauthorized access without Bearer token
-    Given a user with ID 679 exists
-    When I send a PATCH request to "/api/users/update" without a Bearer token
-    Then the response status code should be 401
-    And the response should indicate an authentication failure
+  Scenario: Successfully update user details
+    Given the current user information is:
+      | id    | name   | password   | email                    | countryCode | phoneNumber | address        |
+      | 759   | little | Kyz905AzO$ | data                     | medical     | sea         | environment    |
+    When the user sends a POST request to "/api/users/update" with the new details:
+      | id    | name       | email            | countryCode | phoneNumber | address         |
+      | 759   | updatedName| updatedEmail     | newCountry  | newPhone    | newEnvironment  |
+    Then the response should indicate a successful update with status code 200
 
-  Scenario: Update with invalid email
-    Given a user with ID 679 exists
-    And I have a valid Bearer token
-    When I send a PATCH request to "/api/users/update" with the following invalid email data:
-      | id          | name      | password    | email         | countryCode | phoneNumber | address      |
-      | 679         | increase  | Fu%0Pny5HR  | invalid-email | explain     | myself      | easy         |
-    Then the response status code should be 400
-    And the response should indicate an email validation failure
+  Scenario: Attempt to update user details with invalid token
+    Given the current user information is:
+      | id    | name   | password   | email                    | countryCode | phoneNumber | address        |
+      | 759   | little | Kyz905AzO$ | data                     | medical     | sea         | environment    |
+    And the user provides an invalid Bearer token
+    When the user sends a POST request to "/api/users/update" with any new details:
+      | id    | name       | email            | countryCode | phoneNumber |
+      | 759   | updatedName| updatedEmail     | newCountry  | newPhone    |
+    Then the response should indicate failure due to authentication error with status code 401
 
-  Scenario: Update with existing email
-    Given a user with ID 680 exists with email "administration"
-    And I have a valid Bearer token
-    When I send a PATCH request to "/api/users/update" with the following data:
-      | id          | name      | password    | email         | countryCode | phoneNumber | address      |
-      | 679         | increase  | Fu%0Pny5HR  | administration| explain     | myself      | easy         |
-    Then the response status code should be 400
-    And the response should indicate that email already exists
-
-  Scenario: Update with missing required fields
-    Given a user with ID 679 exists
-    And I have a valid Bearer token
-    When I send a PATCH request to "/api/users/update" with missing required fields
-    Then the response status code should be 400
-    And the response should indicate field validation errors
+  Scenario: Attempt to update user details with missing required fields
+    Given the current user information is:
+      | id    | name   | password   | email                    | countryCode | phoneNumber | address        |
+      | 759   | little | Kyz905AzO$ | data                     | medical     | sea         | environment    |
+    When the user sends a POST request to "/api/users/update" missing required email field:
+      | id    | name       | email | countryCode | phoneNumber | address         |
+      | 759   | updatedName|       | newCountry  | newPhone    | newEnvironment  |
+    Then the response should indicate failure due to missing fields with status code 400

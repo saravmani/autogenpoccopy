@@ -2,6 +2,7 @@
 
 import os
 from dotenv import load_dotenv
+from typing import Annotated
 from autogen import AssistantAgent
 from autogen.agentchat.contrib.retrieve_user_proxy_agent import RetrieveUserProxyAgent
 from chromadb.utils import embedding_functions
@@ -25,28 +26,44 @@ openai_ef = embedding_functions.OpenAIEmbeddingFunction(
     model_name="text-embedding-ada-002"
 )
 
+def file_Writer(api_url: Annotated[str, "api url"], content: Annotated[str, "PyTest Test cases to write"]) -> str:
+    cleansed_file_name=api_url.replace("/","_")
+    file_path = os.path.join(os.getenv('BDDFILESPATH'), cleansed_file_name+".feature") 
+    with open(file_path, 'w') as file:
+        file.write(content)
+    return "File written successfully."
 
 class APITestCaseGenerator:
     def __init__(self,baseApiUrl):
         self.assistant = AssistantAgent(
             name="assistant",
-            system_message="You are expert in writting API test cases in pytest using python with request package,  based on the scenarios and context." 
-            "Also you follow the proper python syntext and return the exact python code. "
-            "The test cases should be Autonomous and independent. "
-            "If required have pre-setup Ex: For duplicate/existing check condition as part of setup create first then create second time"
+             max_consecutive_auto_reply=2,
+            system_message="""You are expert in writting API test cases in pytest using python with request package,  based on the scenarios and context.
+            Also you follow the proper python syntext and return the exact python code. 
+            The test cases should be Autonomous and independent. 
+            If required have pre-setup Ex: For duplicate/existing check condition as part of setup create first then create second time
+            Directly check the response status code only. dont check the response message or content           
+            Add 1 second delay for each test case DELAY_SECONDS (Check the below example)
+
             
-            "Exact BASE_URL = "+ baseApiUrl + 
-            "Sample code in pytest: "
+            Exact BASE_URL = """+ baseApiUrl + 
+            "Sample code in pytest: "+
             """
                 import pytest
                 import requests
+                import time
+                from pytest_bdd import given
 
+                DELAY_SECONDS = 1
                 BASE_URL = "http://localhost:8080"  # Example API
+                
+                @given("test get posts") ## BDD reference
                 def test_get_posts():
                     response = requests.get(f"{BASE_URL}/posts")
                     assert response.status_code == 200
                     posts = response.json()
                     assert isinstance(posts, list)
+                    time.sleep(DELAY_SECONDS)
 
             -------------------------------------
             
@@ -61,7 +78,7 @@ class APITestCaseGenerator:
         self.ragproxyagent = RetrieveUserProxyAgent(
             name="ragproxyagent",
             human_input_mode="NEVER",
-            max_consecutive_auto_reply=1,
+            max_consecutive_auto_reply=2,
             system_message="Assistant who has extra content retrieval power for solving difficult problems.",
             code_execution_config=False,
             is_termination_msg=lambda msg: msg.get("content") is not None and "TERMINATE" in msg["content"],
@@ -84,6 +101,8 @@ class APITestCaseGenerator:
         )
 
     def remove_code_blocks(self,text, lang): 
+        if text is None:
+            return ""
         text = text.replace("```"+lang, "")
         text = text.replace("```", "") 
         text = text.replace("TERMINATE", "")
@@ -113,17 +132,20 @@ class APITestCaseGenerator:
 
     def generate_pytest_testcases_for_features(self, problem):
         self.assistant.reset()
-        chat_history = self.ragproxyagent.initiate_chat(self.assistant, message=self.ragproxyagent.message_generator, problem=problem).chat_history
-        if chat_history and len(chat_history) > 0:
-            # Iterate through the chat history to find the last assistant message.
-                    last_assistant_message = None
-                    for message in reversed(chat_history):
-                        if message.get("name") == "assistant":
-                            last_assistant_message = message
-                            break
-                    
+        try:
+            chat_history = self.ragproxyagent.initiate_chat(self.assistant, message=self.ragproxyagent.message_generator, problem=problem).chat_history
+            if chat_history and len(chat_history) > 0:
+                # Iterate through the chat history to find the last assistant message.
+                        last_assistant_message = None
+                        for message in reversed(chat_history):
+                            if message.get("name") == "assistant":
+                                last_assistant_message = message
+                                break
+                        
 
-                    return last_assistant_message["content"] 
+                        return last_assistant_message["content"] 
+        except Exception as e:
+              print(f"Error generating BDD test cases: {e}")
 
 
 # qa_system = QuestionAnsweringSystem()

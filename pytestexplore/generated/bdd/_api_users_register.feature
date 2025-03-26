@@ -1,31 +1,38 @@
 Feature: User Registration
 
-  Scenario: Successfully register a new user
-    Given I have user details with name "John Doe", password "Secure#1234", email "john.doe@example.com", country code "IN", phone number "9876543210", address "123 Main St, New Delhi"
-    When I POST the user registration details to "/api/users/register"
-    Then the response status should be 200
-    And the response should contain the user's name, email, country code "IN", phone number "9876543210", address, and account details
+  Scenario: Successfully registering a new user with valid input
+    Given the API endpoint "/api/users/register"
+    When I send a POST request with JSON body
+      | name        | password     | email                   | countryCode | phoneNumber | address             |
+      | John Doe    | Pass#1234567 | john.doe@example.com    | IN          | 1234567890  | 123 Elm Street, NYC |
+    Then the API response status code should be 200
+    And the response should include the user details except password
+    And the response should have additional keys "accountNumber", "ifscCode", "branch", "accountType"
 
-  Scenario: Register user with duplicate phone number
-    Given a user already exists with phone number "9876543210"
-    And I have user details with name "Jane Doe", password "AnotherSecure#1234", email "jane.doe@example.com", country code "IN", phone number "9876543210", address "456 Second St, Mumbai"
-    When I POST the user registration details to "/api/users/register"
-    Then the response status should be 400
-    And the response should be the error message "Phone number already exists"
+  Scenario: Duplicate email registration attempt
+    Given the API endpoint "/api/users/register"
+    When I send a POST request with JSON body
+      | name        | password     | email                   | countryCode | phoneNumber | address             |
+      | Jane Doe    | Pass#1234567 | john.doe@example.com    | IN          | 1234567891  | 456 Oak Street, LA  |
+    Then the API response should be the error message "Email already exists"
 
-  Scenario: Register user with duplicate email
-    Given a user already exists with email "jane.doe@example.com"
-    And I have user details with name "Jim Doe", password "GoodPass#5678", email "jane.doe@example.com", country code "IN", phone number "9876543219", address "789 Third St, Chennai"
-    When I POST the user registration details to "/api/users/register"
-    Then the response status should be 400
-    And the response should be the error message "Email already exists"
+  Scenario: Duplicate phone number registration attempt
+    Given the API endpoint "/api/users/register"
+    When I send a POST request with JSON body
+      | name        | password     | email                   | countryCode | phoneNumber | address             |
+      | Jane Smith  | Pass#1234567 | jane.smith@example.com  | IN          | 1234567890  | 789 Pine Street, SF |
+    Then the API response should be the error message "Phone number already exists"
 
-  Scenario: Register user with invalid password
-    Given I have user details with name "Jake Doe", password "simplepass", email "jake.doe@example.com", country code "IN", phone number "9876543220", address "101 First St, Kolkata"
-    When I POST the user registration details to "/api/users/register"
-    Then the response status should be 400
+  Scenario: Registration attempt with invalid password
+    Given the API endpoint "/api/users/register"
+    When I send a POST request with JSON body
+      | name        | password | email                   | countryCode | phoneNumber | address                 |
+      | Bob Brown   | pass123  | bob.brown@example.com   | IN          | 9876543210  | 321 Maple Street, DC   |
+    Then the API response status code should be 400
 
-  Scenario: Register user with invalid phone number length
-    Given I have user details with name "Lara Doe", password "Complex#1234", email "lara.doe@example.com", country code "IN", phone number "98765", address "303 Fourth St, Bangalore"
-    When I POST the user registration details to "/api/users/register"
-    Then the response status should be 400
+  Scenario: Registration attempt with missing required fields
+    Given the API endpoint "/api/users/register"
+    When I send a POST request with incomplete JSON body
+      | name        | password     | email                   | countryCode | phoneNumber | address             |
+      | missingName | Pass#1234567 | myemail@example.com     | IN          | 1230984567  |                     |
+    Then the API response status code should be 400

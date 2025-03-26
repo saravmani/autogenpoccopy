@@ -88,8 +88,11 @@ class BDDValidator:
         self.user_proxy.register_for_execution(name="feature_file_Writer")(feature_file_Writer)
 
     def update_bdd(self):
+        user_decision = "BDD Test cases are generated. You can validate the Feature files. Do you want AI Help in  updating the BDD test cases? (type 'no' to quit)"
+        if input(user_decision) == "no":
+            return
         while True:
-            user_input = input("Do you want help in correcting the BDD test cases? Enter the details with specific file details. (type 'exit' to quit): ")
+            user_input = input("Enter the details with specific feature file details where you need help. (type 'exit' to quit): ")
             if user_input.lower() == "exit":
                 break
         
@@ -97,6 +100,7 @@ class BDDValidator:
                 self.feature_file_finder,
                 message=user_input,
             )
+            print('Your request has been taken care...')
  
 
 # bdd_validator = BDDValidator()

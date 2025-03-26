@@ -1,28 +1,44 @@
-Feature: Update Account PIN
+Feature: Update PIN
 
-  Background:
-    Given the API requires bearer token authentication
-    And a valid bearer token is "validBearerToken"
+  Scenario: Successfully update the PIN
+    Given I have a valid authentication token
+    And I have an account with accountNumber "856899"
+    And my current PIN is "1234"
+    And I know my account password "Secure#1234"
+    When I send a POST request to "/api/account/pin/update" with the oldPin "1234", newPin "5678", accountNumber "856899", and password "Secure#1234"
+    Then the response status code should be 200
+    And the response message should indicate a successful PIN update
 
-  Scenario: Successfully update account PIN
-    Given a user with account number "thousand" and valid old PIN "relate"
-    And valid new PIN "remain" and correct password "mWM8^WXpk!"
-    When the user updates the account PIN via "/api/account/pin/update"
-    Then the response should indicate a successful PIN update
+  Scenario: Fail to update PIN due to incorrect old PIN
+    Given I have a valid authentication token
+    And I have an account with accountNumber "856899"
+    And my current PIN is "1234"
+    And I know my account password "Secure#1234"
+    When I send a POST request to "/api/account/pin/update" with the oldPin "1111", newPin "5678", accountNumber "856899", and password "Secure#1234"
+    Then the response status code should be 403
+    And the response message should indicate incorrect old PIN
 
-  Scenario: Update account PIN with incorrect old PIN
-    Given a user with account number "thousand"
-    And incorrect old PIN "incorrectPin"
-    When the user attempts to update the account PIN with new PIN "remain"
-    Then the response should indicate a failure due to incorrect old PIN
+  Scenario: Fail to update PIN due to missing authentication token
+    Given I have an account with accountNumber "856899"
+    And my current PIN is "1234"
+    And I know my account password "Secure#1234"
+    When I send a POST request to "/api/account/pin/update" without an authentication token
+    Then the response status code should be 401
+    And the response message should indicate authentication failure
 
-  Scenario: Update account PIN with unauthorized access
-    Given a user without a valid bearer token
-    When the user attempts to update the account PIN
-    Then the response should indicate an unauthorized access error
+  Scenario: Fail to update PIN due to weak new PIN
+    Given I have a valid authentication token
+    And I have an account with accountNumber "856899"
+    And my current PIN is "1234"
+    And I know my account password "Secure#1234"
+    When I send a POST request to "/api/account/pin/update" with the oldPin "1234", newPin "12", accountNumber "856899", and password "Secure#1234"
+    Then the response status code should be 400
+    And the response message should indicate weak new PIN
 
-  Scenario: Update account PIN with invalid new PIN format
-    Given a user with account number "thousand" and valid old PIN "relate"
-    And invalid new PIN "short"
-    When the user attempts to update the account PIN
-    Then the response should indicate a failure due to invalid PIN format
+  Scenario: Fail to update PIN due to incorrect password
+    Given I have a valid authentication token
+    And I have an account with accountNumber "856899"
+    And my current PIN is "1234"
+    When I send a POST request to "/api/account/pin/update" with the oldPin "1234", newPin "5678", accountNumber "856899", and password "WrongPassword123"
+    Then the response status code should be 403
+    And the response message should indicate incorrect password

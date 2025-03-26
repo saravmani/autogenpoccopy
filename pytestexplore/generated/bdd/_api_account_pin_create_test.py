@@ -1,52 +1,62 @@
+ 
+
 import pytest
+from pytest_bdd import given
 import requests
+import time
 
+DELAY_SECONDS = 1
 BASE_URL = "http://localhost:8080"
-AUTH_TOKEN = "Bearer valid_auth_token"  # Replace with a valid token for setup
+ACCOUNT_NUMBER = "856899"
+PIN = "1234"
+PASSWORD = "Secure#1234"
+IDENTIFIER = "genai_test_user@example.com"
 
-@pytest.fixture
-def headers():
-    return {"Authorization": AUTH_TOKEN, "Content-Type": "application/json"}
 
-def test_success_create_pin(headers):
-    data = {
-        "accountNumber": "1234567890",
-        "pin": "1234",
-        "password": "_#61ZRiE#1"
-    }
-    response = requests.post(f"{BASE_URL}/api/account/pin/create", json=data, headers=headers)
+@given("has a valid bearer token")
+def get_bearer_token(identifier, password):
+    response = requests.post(f"{BASE_URL}/api/users/login", json={"identifier": identifier, "password": password})
+    return response.json().get("token")
+
+@pytest.fixture(scope='module')
+def bearer_token():
+    return get_bearer_token(IDENTIFIER, PASSWORD)
+
+def test_successful_create_pin(bearer_token):
+    payload = {"accountNumber": ACCOUNT_NUMBER, "pin": PIN, "password": PASSWORD}
+    headers = {"Authorization": f"Bearer {bearer_token}"}
+    response = requests.post(f"{BASE_URL}/api/account/pin/create", json=payload, headers=headers)
     assert response.status_code == 200
-    assert response.json() == "Success"
+    time.sleep(DELAY_SECONDS)
 
-def test_fail_create_duplicate_pin(headers):
-    # Pre-setup: Create PIN first time
-    data = {
-        "accountNumber": "1234567890",
-        "pin": "1234",
-        "password": "_#61ZRiE#1"
-    }
-    requests.post(f"{BASE_URL}/api/account/pin/create", json=data, headers=headers)
-
-    # Attempt to create duplicate PIN
-    response = requests.post(f"{BASE_URL}/api/account/pin/create", json=data, headers=headers)
-    assert response.status_code == 400
-    assert response.json() == "Error: Duplicate PIN creation"
-
-def test_fail_create_pin_invalid_password(headers):
-    data = {
-        "accountNumber": "1234567890",
-        "pin": "1234",
-        "password": "password123"
-    }
-    response = requests.post(f"{BASE_URL}/api/account/pin/create", json=data, headers=headers)
+def test_fail_create_pin_invalid_token():
+    payload = {"accountNumber": ACCOUNT_NUMBER, "pin": PIN, "password": PASSWORD}
+    headers = {"Authorization": "Bearer invalid_token"}
+    response = requests.post(f"{BASE_URL}/api/account/pin/create", json=payload, headers=headers)
     assert response.status_code == 401
-    assert response.json() == "Error: Invalid password"
+    time.sleep(DELAY_SECONDS)
 
-def test_fail_create_pin_missing_field(headers):
-    data = {
-        "accountNumber": "1234567890",
-        "password": "_#61ZRiE#1"
-    }
-    response = requests.post(f"{BASE_URL}/api/account/pin/create", json=data, headers=headers)
+def test_fail_create_pin_duplicate(bearer_token):
+    # Pre-setup: Create PIN successfully first
+    payload = {"accountNumber": ACCOUNT_NUMBER, "pin": PIN, "password": PASSWORD}
+    headers = {"Authorization": f"Bearer {bearer_token}"}
+    requests.post(f"{BASE_URL}/api/account/pin/create", json=payload, headers=headers)
+
+    # Try creating the same PIN again
+    response = requests.post(f"{BASE_URL}/api/account/pin/create", json=payload, headers=headers)
+    assert response.status_code != 200
+    time.sleep(DELAY_SECONDS)
+
+def test_fail_create_pin_missing_fields(bearer_token):
+    payload = {"accountNumber": ACCOUNT_NUMBER, "password": PASSWORD}  # Missing "pin"
+    headers = {"Authorization": f"Bearer {bearer_token}"}
+    response = requests.post(f"{BASE_URL}/api/account/pin/create", json=payload, headers=headers)
     assert response.status_code == 400
-    assert response.json() == "Error: Missing pin field"
+    time.sleep(DELAY_SECONDS)
+
+
+### Notes:
+- `get_bearer_token` is a helper function to obtain a token for simplicity.
+- Each test case corresponds to one of the BDD scenarios.
+- `bearer_token` is a fixture used to get a valid Bearer token, scoped at the module level for reuse across tests without re-authenticating each time.
+- The tests use the `pytest` framework with the `requests` library and include a delay after each test for demonstration purposes.

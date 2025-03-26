@@ -1,86 +1,78 @@
 import pytest
 import requests
+import time
 
+DELAY_SECONDS = 1
 BASE_URL = "http://localhost:8080"
+AUTH_CREDENTIALS = {
+    "identifier": "genai_test_user@example.com",
+    "password": "Secure#1234",
+    "accountNumber": "856899",
+    "pin": "1234"
+}
 
-def test_successful_withdrawal():
-    # Setup: Ensure account has sufficient balance
-    token = "valid_token"  # Assume valid bearer token is available
-    headers = {"Authorization": f"Bearer {token}"}
-    data = {
-        "accountNumber": "123456",
-        "pin": "owner",
-        "amount": 267.67
-    }
-    response = requests.post(f"{BASE_URL}/api/account/withdraw", json=data, headers=headers)
-    
+def login():
+    response = requests.post(f"{BASE_URL}/api/users/login", json={
+        "identifier": AUTH_CREDENTIALS["identifier"],
+        "password": AUTH_CREDENTIALS["password"]
+    })
+    return response.json()["token"]
+
+@pytest.fixture
+def auth_header():
+    token = login()
+    return {"Authorization": f"Bearer {token}"}
+
+def test_successful_cash_withdrawal(auth_header):
+    response = requests.post(f"{BASE_URL}/api/account/withdraw", headers=auth_header, json={
+        "accountNumber": AUTH_CREDENTIALS["accountNumber"],
+        "pin": AUTH_CREDENTIALS["pin"],
+        "amount": 400
+    })
     assert response.status_code == 200
-    assert response.json().get("status") == "success"
+    time.sleep(DELAY_SECONDS)
 
-def test_withdrawal_insufficient_balance():
-    # Setup: Ensure account has insufficient balance
-    token = "valid_token"
-    headers = {"Authorization": f"Bearer {token}"}
-    data = {
-        "accountNumber": "123456",
-        "pin": "owner",
-        "amount": 267.67
-    }
-    response = requests.post(f"{BASE_URL}/api/account/withdraw", json=data, headers=headers)
-    
-    assert response.status_code == 400
-    assert "insufficient funds" in response.text
+def test_withdrawal_insufficient_funds(auth_header):
+    response = requests.post(f"{BASE_URL}/api/account/withdraw", headers=auth_header, json={
+        "accountNumber": AUTH_CREDENTIALS["accountNumber"],
+        "pin": AUTH_CREDENTIALS["pin"],
+        "amount": 5000
+    })
+    assert response.status_code != 200
+    time.sleep(DELAY_SECONDS)
 
-def test_withdrawal_invalid_account_number():
-    token = "valid_token"
-    headers = {"Authorization": f"Bearer {token}"}
-    data = {
-        "accountNumber": "invalid",
-        "pin": "owner",
-        "amount": 267.67
-    }
-    response = requests.post(f"{BASE_URL}/api/account/withdraw", json=data, headers=headers)
-    
-    assert response.status_code == 400
-    assert "invalid account number" in response.text
+def test_withdrawal_non_multiple_of_100(auth_header):
+    response = requests.post(f"{BASE_URL}/api/account/withdraw", headers=auth_header, json={
+        "accountNumber": AUTH_CREDENTIALS["accountNumber"],
+        "pin": AUTH_CREDENTIALS["pin"],
+        "amount": 411.06
+    })
+    assert response.status_code != 200
+    time.sleep(DELAY_SECONDS)
 
-def test_withdrawal_incorrect_pin():
-    token = "valid_token"
-    headers = {"Authorization": f"Bearer {token}"}
-    data = {
-        "accountNumber": "123456",
-        "pin": "wrong",
-        "amount": 100
-    }
-    response = requests.post(f"{BASE_URL}/api/account/withdraw", json=data, headers=headers)
-    
-    assert response.status_code == 400
-    assert "incorrect PIN" in response.text
+def test_invalid_pin(auth_header):
+    response = requests.post(f"{BASE_URL}/api/account/withdraw", headers=auth_header, json={
+        "accountNumber": AUTH_CREDENTIALS["accountNumber"],
+        "pin": "0000",
+        "amount": 400
+    })
+    assert response.status_code != 200
+    time.sleep(DELAY_SECONDS)
 
-def test_duplicate_withdrawal_request():
-    token = "valid_token"
-    headers = {"Authorization": f"Bearer {token}"}
-    data = {
-        "accountNumber": "123456",
-        "pin": "owner",
-        "amount": 267.67
-    }
-    # Assume first request is successful
-    requests.post(f"{BASE_URL}/api/account/withdraw", json=data, headers=headers)
-    
-    # Test duplicate request
-    response = requests.post(f"{BASE_URL}/api/account/withdraw", json=data, headers=headers)
-    
-    assert response.status_code == 400
-    assert "duplicate request" in response.text
-
-def test_unauthorized_access_missing_token():
-    data = {
-        "accountNumber": "123456",
-        "pin": "owner",
-        "amount": 100
-    }
-    response = requests.post(f"{BASE_URL}/api/account/withdraw", json=data)
-    
+def test_unauthorized_withdrawal_attempt():
+    response = requests.post(f"{BASE_URL}/api/account/withdraw", json={
+        "accountNumber": AUTH_CREDENTIALS["accountNumber"],
+        "pin": AUTH_CREDENTIALS["pin"],
+        "amount": 400
+    })
     assert response.status_code == 401
-    assert "unauthorized access" in response.text
+    time.sleep(DELAY_SECONDS)
+
+def test_withdrawal_exceeding_maximum_limit(auth_header):
+    response = requests.post(f"{BASE_URL}/api/account/withdraw", headers=auth_header, json={
+        "accountNumber": AUTH_CREDENTIALS["accountNumber"],
+        "pin": AUTH_CREDENTIALS["pin"],
+        "amount": 150000
+    })
+    assert response.status_code != 200
+    time.sleep(DELAY_SECONDS)

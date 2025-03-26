@@ -48,13 +48,13 @@ class ModifiedBddFinder:
              
             name="structured_agent",
             system_message=
-             "You are an expert at identifying unique API URLs and its context from the modified content.\n\n"
+             "You are an expert at finding the existing API URLs from the modified content.\n\n"
         "Background:\n"
         "I previously wrote test cases for my Microservice Application based on 'document1'.\n"
         "However, the business analyst has updated the content, creating a new 'document2'.\n"
         "I've determined the differences between 'document1' and 'document2' and provided the modified content below.\n\n"
         "Task:\n"
-        "Extract ONLY the impacted API URLs from the modified content.\n\n"
+        "Find ONLY the related impacted API URLs from the context based on the provided content section. You are not going to generate/modify any URL but you are going to just indentify the impacted EXISTING url from the document context.\n\n"
         "You must respond strictly with a JSON structure as follows. dont add any markup.  i want exact json output with all modified urls:\n"
         "{"
         '  "api_urls_with_content_modified": [ {"url": "api url1", "content": "modified content1"}, {"url": "api url2", "content": "modified content2"} ,"..."]'
@@ -96,7 +96,8 @@ class ModifiedBddFinder:
         self.structured_agent.reset()
         conent_modified = self.get_modified_bdd_files_difference()
         task = "Find the related API Urls related to the content : "+conent_modified
-        chathistory =self.ragproxyagent.initiate_chat(self.structured_agent, message=task).chat_history
+        # chathistory =self.ragproxyagent.initiate_chat(self.structured_agent, message=task).chat_history
+        chat_history = self.ragproxyagent.initiate_chat(self.structured_agent, message=self.ragproxyagent.message_generator, problem=task).chat_history
         for msg in self.ragproxyagent.chat_messages[self.structured_agent]:
             if msg.get("content") :
                 try:

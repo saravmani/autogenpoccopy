@@ -1,63 +1,90 @@
 import pytest
 import requests
+import time
 
+DELAY_SECONDS = 1
 BASE_URL = "http://localhost:8080"
+AUTH_URL = f"{BASE_URL}/api/users/login"
 
-@pytest.fixture
-def auth_token():
-    # Assume successful login response
-    response = requests.post(f"{BASE_URL}/api/users/login", json={
-        "identifier": "user@example.com",
-        "password": "Password123!"
+def get_bearer_token():
+    response = requests.post(AUTH_URL, json={
+        "identifier": "genai_test_user@example.com",
+        "password": "Secure#1234"
     })
-    assert response.status_code == 200
-    return response.json()
+    return response.json().get("token")
 
-def test_successful_fund_transfer(auth_token):
-    headers = {"Authorization": f"Bearer {auth_token}"}
-    fund_transfer_data = {
-        "sourceAccountNumber": "team",
-        "targetAccountNumber": "everything",
-        "amount": 966.27,
-        "pin": "partner"
-    }
-    response = requests.post(f"{BASE_URL}/api/account/fund-transfer", json=fund_transfer_data, headers=headers)
-    assert response.status_code == 200
-    assert response.json().get("message") == "Fund transfer successful"
+@pytest.fixture(scope="module")
+def bearer_token():
+    return get_bearer_token()
 
-def test_fund_transfer_insufficient_balance(auth_token):
-    headers = {"Authorization": f"Bearer {auth_token}"}
-    fund_transfer_data = {
-        "sourceAccountNumber": "team",
-        "targetAccountNumber": "everything",
-        "amount": 966.27,
-        "pin": "partner"
+def test_successful_fund_transfer(bearer_token):
+    headers = {"Authorization": f"Bearer {bearer_token}"}
+    data = {
+        "sourceAccountNumber": "fall",
+        "targetAccountNumber": "enough",
+        "amount": 500,
+        "pin": "1234"
     }
-    # Simulate insufficient balance
-    response = requests.post(f"{BASE_URL}/api/account/fund-transfer", json=fund_transfer_data, headers=headers)
+    response = requests.post(f"{BASE_URL}/api/account/fund-transfer", json=data, headers=headers)
+    assert response.status_code == 200
+    time.sleep(DELAY_SECONDS)
+
+def test_insufficient_funds_for_transfer(bearer_token):
+    headers = {"Authorization": f"Bearer {bearer_token}"}
+    data = {
+        "sourceAccountNumber": "fall",
+        "targetAccountNumber": "enough",
+        "amount": 1000000,  # Exceeding the assumed account balance for test
+        "pin": "1234"
+    }
+    response = requests.post(f"{BASE_URL}/api/account/fund-transfer", json=data, headers=headers)
     assert response.status_code == 400
-    assert response.json().get("error") == "Insufficient balance"
+    time.sleep(DELAY_SECONDS)
 
-def test_fund_transfer_invalid_pin(auth_token):
-    headers = {"Authorization": f"Bearer {auth_token}"}
-    fund_transfer_data = {
-        "sourceAccountNumber": "team",
-        "targetAccountNumber": "everything",
-        "amount": 966.27,
-        "pin": "wrongPin"
+def test_invalid_pin_for_fund_transfer(bearer_token):
+    headers = {"Authorization": f"Bearer {bearer_token}"}
+    data = {
+        "sourceAccountNumber": "fall",
+        "targetAccountNumber": "enough",
+        "amount": 500,
+        "pin": "0000"  # Invalid PIN
     }
-    response = requests.post(f"{BASE_URL}/api/account/fund-transfer", json=fund_transfer_data, headers=headers)
+    response = requests.post(f"{BASE_URL}/api/account/fund-transfer", json=data, headers=headers)
+    assert response.status_code == 400
+    time.sleep(DELAY_SECONDS)
+
+def test_invalid_authentication_token():
+    headers = {"Authorization": "Bearer invalid-token"}
+    data = {
+        "sourceAccountNumber": "fall",
+        "targetAccountNumber": "enough",
+        "amount": 500,
+        "pin": "1234"
+    }
+    response = requests.post(f"{BASE_URL}/api/account/fund-transfer", json=data, headers=headers)
     assert response.status_code == 401
-    assert response.json().get("error") == "Invalid PIN"
+    time.sleep(DELAY_SECONDS)
 
-def test_fund_transfer_non_existing_target(auth_token):
-    headers = {"Authorization": f"Bearer {auth_token}"}
-    fund_transfer_data = {
-        "sourceAccountNumber": "team",
-        "targetAccountNumber": "nonExist",
-        "amount": 966.27,
-        "pin": "partner"
+def test_transfer_amount_not_multiple_of_100(bearer_token):
+    headers = {"Authorization": f"Bearer {bearer_token}"}
+    data = {
+        "sourceAccountNumber": "fall",
+        "targetAccountNumber": "enough",
+        "amount": 568.62,  # Amount not in multiples of 100
+        "pin": "1234"
     }
-    response = requests.post(f"{BASE_URL}/api/account/fund-transfer", json=fund_transfer_data, headers=headers)
-    assert response.status_code == 404
-    assert response.json().get("error") == "Target account not found"
+    response = requests.post(f"{BASE_URL}/api/account/fund-transfer", json=data, headers=headers)
+    assert response.status_code == 400
+    time.sleep(DELAY_SECONDS)
+
+def test_transfer_to_same_account(bearer_token):
+    headers = {"Authorization": f"Bearer {bearer_token}"}
+    data = {
+        "sourceAccountNumber": "fall",
+        "targetAccountNumber": "fall",  # Same account number for source and target
+        "amount": 500,
+        "pin": "1234"
+    }
+    response = requests.post(f"{BASE_URL}/api/account/fund-transfer", json=data, headers=headers)
+    assert response.status_code == 400
+    time.sleep(DELAY_SECONDS)
